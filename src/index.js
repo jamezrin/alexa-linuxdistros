@@ -3,7 +3,7 @@ const path = require('path');
 const fs = require('fs');
 
 const distroPath = path.resolve(__dirname, 'ranking.json');
-const distroRanking = JSON.parse(fs.readFileSync(distroPath));
+const distroRankingFile = JSON.parse(fs.readFileSync(distroPath));
 
 const SKILL_TITLE = "Distribuciones de Linux";
 
@@ -21,19 +21,37 @@ function getRankingByPeriod(periodSlot) {
   const periodSlotValue = periodSlot.value;
 
   if (!periodSlotValue) {
-    return distroRanking[0];
+    return distroRankingFile[0];
   }
 
   const periodSlotValueId = getSlotValueId(periodSlot);
   if (periodSlotValueId === "last_month") {
-    return distroRanking[0];
+    return distroRankingFile[0];
   } else if (periodSlotValueId === "last_tree_months") {
-    return distroRanking[1];
+    return distroRankingFile[1];
   } else if (periodSlotValueId === "last_six_months") {
-    return distroRanking[2];
+    return distroRankingFile[2];
   } else if (periodSlotValueId === "last_twelve_months") {
-    return distroRanking[3];
+    return distroRankingFile[3];
   }
+}
+
+function makeDistroList(distroRanking, rankingPage, itemsPerPage = 10) {
+  const startPosition = rankingPage * itemsPerPage;
+  const endingPosition = startPosition + itemsPerPage;
+
+  var distroListText = '';
+  for (var i = startPosition; i < endingPosition; i++) {
+    const distro = distroRanking.distros[i];
+
+    if (i % itemsPerPage > 0) {
+      distroListText += ' ';
+    }
+
+    distroListText += `La <say-as interpret-as="ordinal">${distro.position}</say-as> distro es <lang xml:lang="en-US">${distro.name}</lang> con ${distro.hits} votos.`;
+  }
+
+  return distroListText;
 }
 
 const DistroRankingIntentHandler = {
@@ -42,33 +60,21 @@ const DistroRankingIntentHandler = {
       && handlerInput.requestEnvelope.request.intent.name === "DistroRankingIntent"
   },
 
-  async handle(handlerInput) {
+  handle(handlerInput) {
     const intent = handlerInput.requestEnvelope.request.intent;
     const sessionAttributes = handlerInput.attributesManager.getSessionAttributes() || {};
     const periodSlot = intent.slots["period"];
 
-    const distroRanking = getRankingByPeriod(periodSlot);
-
     sessionAttributes.rankingPage = 1;
-    sessionAttributes.rankingSlot = periodSlot;
+    sessionAttributes.periodSlot = periodSlot;
     handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
 
-    var distroListText = '';
-    for (var i = 0; i < 10; i++) {
-      const distro = distroRanking.distros[i];
-
-      if (i > 0) {
-        distroListText += ' ';
-      }
-
-      distroListText += `La <say-as interpret-as="cardinal">${distro.position}</say-as> distro es <lang xml:lang="en-US">${distro.name}</lang> con ${distro.hits} votos.`;
-    }
-
+    const distroRanking = getRankingByPeriod(periodSlot);
+    const distroListText = makeDistroList(distroRanking, 0);
     const speechText = `Las primeras diez distribuciones en el ranking son: ${distroListText} ¿Quieres saber las siguientes diez?`
     return handlerInput.responseBuilder
       .speak(speechText)
       .reprompt(speechText)
-      .withSimpleCard(SKILL_TITLE, speechText)
       .getResponse();
   }
 }
@@ -85,11 +91,11 @@ const DistroRankingNextIntentHandler = {
   handle(handlerInput) {
     const sessionAttributes = handlerInput.attributesManager.getSessionAttributes() || {};
     const rankingPage = sessionAttributes.rankingPage++;
-
-    const rankingSlot = sessionAttributes.rankingSlot;
+    const periodSlot = sessionAttributes.periodSlot;
     handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
 
-    const distroRanking = getRankingByPeriod(rankingSlot);
+    const distroRanking = getRankingByPeriod(periodSlot);
+
     if (rankingPage * 10 >= distroRanking.distros.length) {
       const speechText = 'No hay mas distros que mostrarte'
       return handlerInput.responseBuilder
@@ -100,26 +106,12 @@ const DistroRankingNextIntentHandler = {
         .getResponse();
     }
 
-    const startPos = rankingPage * 10;
-    const endPos = startPos + 10;
-    var distroListText = '';
-
-    for (var i = startPos; i < endPos; i++) {
-      const distro = distroRanking.distros[i];
-
-      if (i % rankingPage > 0) {
-        distroListText += ' ';
-      }
-
-      distroListText += `La <say-as interpret-as="cardinal">${distro.position}</say-as> distro es <lang xml:lang="en-US">${distro.name}</lang> con ${distro.hits} votos.`;
-    }
-
+    const distroListText = makeDistroList(distroRanking, rankingPage);
     const speechText = `Las siguientes diez distribuciones son: ${distroListText} ¿Quieres saber las siguientes diez?`
 
     return handlerInput.responseBuilder
       .speak(speechText)
       .reprompt(speechText)
-      .withSimpleCard(SKILL_TITLE, speechText)
       .getResponse();
   }
 }
@@ -134,16 +126,17 @@ const DistroRankingStopNextIntentHandler = {
   },
 
   handle(handlerInput) {
-    const sessionAttributes = handlerInput.attributesManager.getSessionAttributes() || {};
+    const attributesManager = handlerInput.attributesManager;
+    const sessionAttributes = attributesManager.getSessionAttributes() || {};
     sessionAttributes.rankingPage = 0;
     sessionAttributes.rankingSlot = null;
-    handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
+    attributesManager.setSessionAttributes(sessionAttributes);
 
     const speechText = '¡Hasta luego!';
     return handlerInput.responseBuilder
       .speak(speechText)
       .reprompt(speechText)
-      .withSimpleCard(SKILL_TITLE, speechText)
+      .withShouldEndSession(true)
       .getResponse();
   }
 }
