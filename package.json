@@ -1,0 +1,27 @@
+{
+  "name": "alexa-linuxdistros",
+  "version": "1.0.0",
+  "description": "Handler: index.handler",
+  "main": "update.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jamezrin/alexa-linuxdistros.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jamezrin/alexa-linuxdistros/issues"
+  },
+  "homepage": "https://github.com/jamezrin/alexa-linuxdistros#readme",
+  "dependencies": {
+    "cheerio": "^1.0.0-rc.3",
+    "request": "^2.88.0",
+    "request-promise": "^4.2.5"
+  }
+}

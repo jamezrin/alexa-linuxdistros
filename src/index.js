@@ -1,7 +1,9 @@
 const Alexa = require('ask-sdk-core');
-const provider = require('./provider');
-const request = require('request-promise');
-const distroRanking = require('./ranking.js');
+const path = require('path');
+const fs = require('fs');
+
+const distroPath = path.resolve(__dirname, 'ranking.json');
+const distroRanking = JSON.parse(fs.readFileSync(distroPath));
 
 const SKILL_TITLE = "Distribuciones de Linux";
 
@@ -15,7 +17,7 @@ function getSlotValueId(intentSlot) {
   }
 }
 
-function getRanking(periodSlot) {
+function getRankingByPeriod(periodSlot) {
   const periodSlotValue = periodSlot.value;
 
   if (!periodSlotValue) {
@@ -45,14 +47,10 @@ const DistroRankingIntentHandler = {
     const sessionAttributes = handlerInput.attributesManager.getSessionAttributes() || {};
     const periodSlot = intent.slots["period"];
 
-    const distroRankingObj = await provider.fetchDistroRanking();
-    const distroRanking = getRankingColumn(
-      distroRankingObj,
-      periodSlot
-    );
+    const distroRanking = getRankingByPeriod(periodSlot);
 
     sessionAttributes.rankingPage = 1;
-    //sessionAttributes.rankingCached = distroRanking;
+    sessionAttributes.rankingSlot = periodSlot;
     handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
 
     var distroListText = '';
@@ -87,8 +85,20 @@ const DistroRankingNextIntentHandler = {
   handle(handlerInput) {
     const sessionAttributes = handlerInput.attributesManager.getSessionAttributes() || {};
     const rankingPage = sessionAttributes.rankingPage++;
-    const distroRanking = sessionAttributes.rankingCached;
+
+    const rankingSlot = sessionAttributes.rankingSlot;
     handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
+
+    const distroRanking = getRankingByPeriod(rankingSlot);
+    if (rankingPage * 10 >= distroRanking.distros.length) {
+      const speechText = 'No hay mas distros que mostrarte'
+      return handlerInput.responseBuilder
+        .speak(speechText)
+        .reprompt(speechText)
+        .withSimpleCard(SKILL_TITLE, speechText)
+        .withShouldEndSession(true)
+        .getResponse();
+    }
 
     const startPos = rankingPage * 10;
     const endPos = startPos + 10;
@@ -126,7 +136,7 @@ const DistroRankingStopNextIntentHandler = {
   handle(handlerInput) {
     const sessionAttributes = handlerInput.attributesManager.getSessionAttributes() || {};
     sessionAttributes.rankingPage = 0;
-    sessionAttributes.rankingCached = null;
+    sessionAttributes.rankingSlot = null;
     handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
 
     const speechText = '¡Hasta luego!';
@@ -197,7 +207,7 @@ const SessionEndedRequestHandler = {
 
     const sessionAttributes = handlerInput.attributesManager.getSessionAttributes() || {};
     sessionAttributes.rankingPage = 0;
-    sessionAttributes.rankingCached = null;
+    sessionAttributes.rankingSlot = null;
     handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
 
     return handlerInput.responseBuilder.getResponse();
