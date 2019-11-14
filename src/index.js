@@ -1,6 +1,7 @@
 const Alexa = require('ask-sdk-core');
 const provider = require('./provider');
 const request = require('request-promise');
+const distroRanking = require('./ranking.js');
 
 const SKILL_TITLE = "Distribuciones de Linux";
 
@@ -14,22 +15,22 @@ function getSlotValueId(intentSlot) {
   }
 }
 
-function getRankingColumn(distroRankingObj, periodSlot) {
+function getRanking(periodSlot) {
   const periodSlotValue = periodSlot.value;
 
   if (!periodSlotValue) {
-    return distroRankingObj[0];
+    return distroRanking[0];
   }
 
   const periodSlotValueId = getSlotValueId(periodSlot);
   if (periodSlotValueId === "last_month") {
-    return distroRankingObj[0];
+    return distroRanking[0];
   } else if (periodSlotValueId === "last_tree_months") {
-    return distroRankingObj[1];
+    return distroRanking[1];
   } else if (periodSlotValueId === "last_six_months") {
-    return distroRankingObj[2];
+    return distroRanking[2];
   } else if (periodSlotValueId === "last_twelve_months") {
-    return distroRankingObj[3];
+    return distroRanking[3];
   }
 }
 
