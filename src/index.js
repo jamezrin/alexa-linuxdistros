@@ -114,7 +114,7 @@ const DistroRankingNextIntentHandler = {
       distroListText += `La <say-as interpret-as="cardinal">${distro.position}</say-as> distro es <lang xml:lang="en-US">${distro.name}</lang> con ${distro.hits} votos.`;
     }
 
-    const speechText = `Las siguientes diez distribuciones son ${distroListText}. ¿Quieres saber las siguientes diez?`
+    const speechText = `Las siguientes diez distribuciones son: ${distroListText} ¿Quieres saber las siguientes diez?`
 
     return handlerInput.responseBuilder
       .speak(speechText)
