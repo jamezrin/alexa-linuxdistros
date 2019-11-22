@@ -3,18 +3,21 @@ const path = require('path');
 const fs = require('fs');
 
 const distroPath = path.resolve(__dirname, 'ranking.json');
-const distroRankingFile = JSON.parse(fs.readFileSync(distroPath));
+const distroRankingFile = JSON.parse(fs.readFileSync(distroPath, 'utf8'));
 
 const SKILL_TITLE = "Distribuciones de Linux";
 
 function getSlotValueId(intentSlot) {
   const resolutions = intentSlot.resolutions.resolutionsPerAuthority;
+
   for (const resolution of resolutions) {
     if (resolution.status.code === "ER_SUCCESS_MATCH") {
       const firstIntentSlotValue = resolution.values[0].value;
       return firstIntentSlotValue.id;
     }
   }
+
+  return null;
 }
 
 function getRankingByPeriod(periodSlot) {
@@ -25,6 +28,7 @@ function getRankingByPeriod(periodSlot) {
   }
 
   const periodSlotValueId = getSlotValueId(periodSlot);
+
   if (periodSlotValueId === "last_month") {
     return distroRankingFile[0];
   } else if (periodSlotValueId === "last_tree_months") {
@@ -34,6 +38,8 @@ function getRankingByPeriod(periodSlot) {
   } else if (periodSlotValueId === "last_twelve_months") {
     return distroRankingFile[3];
   }
+
+  return null;
 }
 
 function makeDistroList(distroRanking, rankingPage, itemsPerPage = 10) {
@@ -65,13 +71,23 @@ const DistroRankingIntentHandler = {
     const sessionAttributes = handlerInput.attributesManager.getSessionAttributes() || {};
     const periodSlot = intent.slots["period"];
 
+    const distroRanking = getRankingByPeriod(periodSlot);
+    if (!distroRanking) {
+      const speechText = `Me has dicho un periodo de tiempo que no es valido, por favor, elige entre el último mes o los últimos tres, seis o doce meses.`;
+
+      return handlerInput.responseBuilder
+        .speak(speechText)
+        .reprompt(speechText)
+        .addElicitSlotDirective('period')
+        .getResponse();
+    }
+
     sessionAttributes.rankingPage = 1;
     sessionAttributes.periodSlot = periodSlot;
     handlerInput.attributesManager.setSessionAttributes(sessionAttributes);
 
-    const distroRanking = getRankingByPeriod(periodSlot);
     const distroListText = makeDistroList(distroRanking, 0);
-    const speechText = `Las primeras diez distribuciones en el ranking son: ${distroListText} ¿Quieres saber las siguientes diez?`
+    const speechText = `Las primeras diez distribuciones en el ranking son: ${distroListText} ¿Quieres saber las siguientes diez?`;
     return handlerInput.responseBuilder
       .speak(speechText)
       .reprompt(speechText)
@@ -96,6 +112,16 @@ const DistroRankingNextIntentHandler = {
 
     const distroRanking = getRankingByPeriod(periodSlot);
 
+    if (!distroRanking) {
+      const speechText = `Me has dicho un periodo de tiempo que no es valido, por favor, elige entre el último mes o los últimos tres, seis o doce meses.`;
+
+      return handlerInput.responseBuilder
+        .speak(speechText)
+        .reprompt(speechText)
+        .addElicitSlotDirective('period')
+        .getResponse();
+    }
+
     if (rankingPage * 10 >= distroRanking.distros.length) {
       const speechText = 'No hay mas distros que mostrarte'
       return handlerInput.responseBuilder
@@ -107,7 +133,7 @@ const DistroRankingNextIntentHandler = {
     }
 
     const distroListText = makeDistroList(distroRanking, rankingPage);
-    const speechText = `Las siguientes diez distribuciones son: ${distroListText} ¿Quieres saber las siguientes diez?`
+    const speechText = `Las siguientes diez distribuciones son: ${distroListText} ¿Quieres saber las siguientes diez?`;
 
     return handlerInput.responseBuilder
       .speak(speechText)
@@ -163,7 +189,7 @@ const HelpIntentHandler = {
   },
   handle(handlerInput) {
     const speechText =
-      'Puedes decir "muéstrame el ranking" o elegir entre el ultimo mes, tres, seis o doce meses, por ejemplo "muéstrame el ranking de los últimos seis meses".' +
+      'Puedes decir "muéstrame el ranking" o elegir entre el último mes, tres, seis o doce meses, por ejemplo "muéstrame el ranking de los últimos seis meses". ' +
       'Por defecto te muestro el ranking de este último mes.';
 
     return handlerInput.responseBuilder
