@@ -93,7 +93,7 @@ const DistroRankingIntentHandler = {
       .reprompt(speechText)
       .getResponse();
   }
-}
+};
 
 const DistroRankingNextIntentHandler = {
   canHandle(handlerInput) {
@@ -140,7 +140,7 @@ const DistroRankingNextIntentHandler = {
       .reprompt(speechText)
       .getResponse();
   }
-}
+};
 
 const DistroRankingStopNextIntentHandler = {
   canHandle(handlerInput) {
@@ -165,7 +165,7 @@ const DistroRankingStopNextIntentHandler = {
       .withShouldEndSession(true)
       .getResponse();
   }
-}
+};
 
 const LaunchRequestHandler = {
   canHandle(handlerInput) {

@@ -30,4 +30,4 @@ fetchDistroRanking().then(rankingResponse => {
     const rankingPath = path.resolve(__dirname, 'src/ranking.json');
     fs.writeFileSync(rankingPath, JSON.stringify(rankingResponse));
     console.log('Successfully updated the ranking database');
-})
+});
